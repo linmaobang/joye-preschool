@@ -59,7 +59,7 @@ export default function Shop() {
       {/* 贴纸包 */}
       <Box>
         <Group gap="sm" mb="sm">
-          <Text size="sm" fw={700} className="text-slate-700">🖼️ 贴纸包（每包开 3 张）</Text>
+          <Text size="sm" fw={700} className="text-slate-700">🖼️ 贴纸收藏（30 金币兑换 1 张）</Text>
         </Group>
         <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
           {stickerPacks.map(pack => {
@@ -77,14 +77,19 @@ export default function Shop() {
                   <Button
                     size="sm"
                     radius="xl"
-                    color="amber"
                     fullWidth
                     disabled={disabled}
                     onClick={() => handleBuyPack(pack.id)}
-                    className={!disabled ? 'font-bold' : ''}
-                    leftSection={<CoinIcon size={14} className="text-white" />}
+                    className={`whitespace-nowrap font-bold ${
+                      complete
+                        ? 'bg-gray-100 text-gray-500'
+                        : disabled
+                          ? 'bg-amber-50 text-amber-500 border-2 border-amber-200'
+                          : 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow hover:shadow-md'
+                    }`}
+                    leftSection={<CoinIcon size={14} />}
                   >
-                    {complete ? '已集齐' : '30 金币'}
+                    {complete ? '已集齐' : `${STICKER_PRICE} 金币`}
                   </Button>
                 </Stack>
               </Card>
@@ -130,13 +135,17 @@ export default function Shop() {
                     <Button
                       size="xs"
                       radius="xl"
-                      color="amber"
                       fullWidth
                       disabled={disabled}
                       onClick={() => handleBuySkin(skin.id)}
-                      leftSection={<CoinIcon size={12} className="text-white" />}
+                      className={`whitespace-nowrap font-bold ${
+                        disabled
+                          ? 'bg-amber-50 text-amber-500 border-2 border-amber-200'
+                          : 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow'
+                      }`}
+                      leftSection={<CoinIcon size={12} />}
                     >
-                      80 金币
+                      {SKIN_PRICE} 金币
                     </Button>
                   )}
                 </Stack>
@@ -157,20 +166,29 @@ export default function Shop() {
             <Text fw={800} size="xl" className="text-amber-600">开包成功！</Text>
             <Text size="sm" c="dimmed">{openResult.packEmoji} {openResult.packName} 获得：</Text>
             <Group gap="md">
-              {openResult.newStickers.map(id => {
+              {openResult.newStickers.map((id, i) => {
                 const pack = stickerPacks.find(p => p.stickers.some(s => s.id === id))
                 const st = pack?.stickers.find(s => s.id === id)
                 return (
                   <Stack key={id} align="center" gap={4}>
-                    <Text className="text-5xl animate-bounce-in">{st?.emoji}</Text>
-                    <Text size="xs" fw={600} className="text-slate-700">{st?.name}</Text>
+                    <Box
+                      className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-yellow-50 border-2 border-amber-200 flex items-center justify-center shadow-inner animate-fade-in"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    >
+                      <Text className="text-5xl animate-sticker-pop" style={{ animationDelay: `${i * 0.15}s` }}>
+                        {st?.emoji}
+                      </Text>
+                    </Box>
+                    <Text size="xs" fw={600} className="text-slate-700 animate-fade-in" style={{ animationDelay: `${i * 0.15 + 0.25}s` }}>
+                      {st?.name}
+                    </Text>
                   </Stack>
                 )
               })}
             </Group>
             {openResult.refund > 0 && (
               <Text size="sm" fw={600} className="text-emerald-600">
-                重复贴纸补偿 +{openResult.refund} 金币
+                抽到重复贴纸，返还 +{openResult.refund} 金币
               </Text>
             )}
             <Button color="amber" radius="xl" onClick={() => setOpenResult(null)}>太好了！</Button>

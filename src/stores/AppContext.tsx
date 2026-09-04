@@ -238,7 +238,7 @@ export function AppProvider({ children }: AppProviderProps) {
     })
   }, [])
 
-  // 购买贴纸包：30 金币开 3 张（不重复），重复补偿 +5/张，集齐一套 +50
+  // 购买贴纸：30 金币兑换 1 张（不重复），集齐一套 +50
   const buyStickerPack = useCallback((packId: string): { newStickers: string[]; refund: number } | null => {
     const pack = getPackById(packId)
     if (!pack) return null
@@ -246,8 +246,8 @@ export function AppProvider({ children }: AppProviderProps) {
     if (owned.length >= pack.stickers.length) return { newStickers: [], refund: 0 }
     if (gamification.coins < 30) return null
     const available = pack.stickers.filter(s => !owned.includes(s.id))
-    const picked = [...available].sort(() => Math.random() - 0.5).slice(0, 3).map(s => s.id)
-    const refund = (3 - picked.length) * 5
+    const picked = [...available].sort(() => Math.random() - 0.5).slice(0, 1).map(s => s.id)
+    const refund = (1 - picked.length) * 15
     setGamification(prev => {
       const curOwned = prev.shop.ownedStickers[packId] || []
       const newOwned = [...new Set([...curOwned, ...picked])]
