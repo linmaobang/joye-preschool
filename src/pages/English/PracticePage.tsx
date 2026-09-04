@@ -12,7 +12,9 @@ import {
 } from '@mantine/core'
 import { useEnglishAudio } from '../../hooks/useEnglishAudio'
 import { useAudio } from '../../hooks/useAudio'
+import { useGamification } from '../../hooks/useGamification'
 import { useApp } from '../../stores/AppContext'
+import ComboDisplay from '../../components/ComboDisplay'
 import { 
   getRandomWords, 
   categoryLabels, 
@@ -67,7 +69,8 @@ function generateQuestion(words: EnglishWord[], type: QuestionType, currentWord:
 export default function EnglishPracticePage() {
   const { speakWord } = useEnglishAudio()
   const { playCorrect, playWrong, playCompletion } = useAudio()
-  const { updateEnglishProgress } = useApp()
+  const { updateEnglishProgress, completePractice } = useApp()
+  const { combo, lastGain, handleAnswer: handleAnswerGamification, resetCombo } = useGamification()
   
   const [stage, setStage] = useState<'select' | 'practice' | 'result'>('select')
   const [selectedCategory, setSelectedCategory] = useState<WordCategory | null>(null)
@@ -93,7 +96,8 @@ export default function EnglishPracticePage() {
     setSelectedAnswer(null)
     setIsAnswered(false)
     setStage('practice')
-  }, [selectedCategory, questionCount])
+    resetCombo()
+  }, [selectedCategory, questionCount, resetCombo])
 
   const handleAnswer = useCallback((answer: string) => {
     if (isAnswered) return
@@ -102,13 +106,14 @@ export default function EnglishPracticePage() {
     setIsAnswered(true)
     
     const isCorrect = answer === questions[currentIndex].answer
+    handleAnswerGamification(isCorrect)
     if (isCorrect) {
       setCorrectCount(prev => prev + 1)
       playCorrect()
     } else {
       playWrong()
     }
-  }, [isAnswered, questions, currentIndex, playCorrect, playWrong])
+  }, [isAnswered, questions, currentIndex, playCorrect, playWrong, handleAnswerGamification])
 
   const handleNext = useCallback(() => {
     if (currentIndex < questions.length - 1) {
@@ -118,9 +123,10 @@ export default function EnglishPracticePage() {
     } else {
       playCompletion()
       updateEnglishProgress(questions.length, correctCount)
+      completePractice(questions.length, correctCount)
       setStage('result')
     }
-  }, [currentIndex, questions.length, playCompletion, correctCount, updateEnglishProgress])
+  }, [currentIndex, questions.length, playCompletion, correctCount, updateEnglishProgress, completePractice])
 
   const handleRestart = () => {
     setStage('select')
@@ -231,6 +237,8 @@ export default function EnglishPracticePage() {
           </Group>
           <Progress value={progress} size="sm" radius="xl" color="teal" />
         </Box>
+
+        <ComboDisplay combo={combo} gain={lastGain} />
 
         <Card shadow="md" padding="xl" radius="xl" className="bg-white border-2 border-emerald-100 animate-slide-up stagger-1">
           <Stack align="center" gap="md">

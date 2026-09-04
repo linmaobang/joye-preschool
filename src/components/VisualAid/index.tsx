@@ -17,9 +17,38 @@ export default function VisualAid({ visual, highlightCount }: VisualAidProps) {
       return <ItemsVisual items={visual.items || []} />
     case 'numberLine':
       return <NumberLineVisual range={visual.range || [0, 10]} />
+    case 'emojiRows':
+      return <EmojiRowsVisual caption={visual.caption} rows={visual.rows || []} />
     default:
       return null
   }
+}
+
+function EmojiRowsVisual({ caption, rows }: { caption?: string; rows: string[][] }) {
+  return (
+    <Box className="p-4 bg-gradient-to-br from-white to-amber-50 rounded-2xl shadow-inner">
+      {caption && (
+        <Text ta="center" size="sm" c="dimmed" mb="sm" className="animate-slide-up">
+          {caption}
+        </Text>
+      )}
+      <div className="flex flex-col items-center gap-3 max-w-[360px] mx-auto">
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+            {row.map((item, i) => (
+              <span
+                key={i}
+                className="text-2xl sm:text-3xl animate-pop emoji-shadow"
+                style={{ animationDelay: `${(rowIndex * 6 + i) * 0.05}s` }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </Box>
+  )
 }
 
 function DotsVisual({ count, highlight }: { count: number; highlight?: number }) {

@@ -15,11 +15,15 @@ import {
 import type { Question, WrongQuestion, LevelConfig } from '../../types'
 import { useApp } from '../../stores/AppContext'
 import { useAudio } from '../../hooks/useAudio'
+import { useGamification } from '../../hooks/useGamification'
 import { levels, difficultyLabels, difficultyColors, getLevelById } from '../../data/levels'
 import { generateQuestions, checkAnswer } from '../../utils/questionGenerator'
+import { starsToCoins } from '../../utils/gamification'
 import QuestionCard from '../../components/QuestionCard'
 import ProgressBar from '../../components/ProgressBar'
 import StarRating, { calculateStars } from '../../components/StarRating'
+import ComboDisplay from '../../components/ComboDisplay'
+import CoinIcon from '../../components/CoinIcon'
 import {
   IconChallenge,
   IconStar,
@@ -56,8 +60,9 @@ function IconTrophy({ size = 24, className = '' }: { size?: number; className?: 
 export default function Challenge() {
   const { levelId } = useParams<{ levelId: string }>()
   const navigate = useNavigate()
-  const { challengeProgress, updateChallengeProgress, recordAnswer, addWrongQuestion } = useApp()
+  const { challengeProgress, updateChallengeProgress, recordAnswer, addWrongQuestion, completeLevel } = useApp()
   const { playCorrect, playWrong, playCompletion } = useAudio()
+  const { combo, lastGain, handleAnswer: handleAnswerGamification, resetCombo } = useGamification()
 
   const [currentLevel, setCurrentLevel] = useState<LevelConfig | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
@@ -97,7 +102,8 @@ export default function Challenge() {
     setIsAnswered(false)
     setIsPlaying(true)
     setShowResult(false)
-  }, [])
+    resetCombo()
+  }, [resetCombo])
 
   const handleSelectLevel = useCallback((level: LevelConfig) => {
     if (!isLevelUnlocked(level)) return
@@ -112,6 +118,8 @@ export default function Challenge() {
 
     const currentQuestion = questions[currentIndex]
     const isCorrect = checkAnswer(currentQuestion, answer)
+
+    handleAnswerGamification(isCorrect)
 
     if (isCorrect) {
       setCorrectCount(prev => prev + 1)
@@ -130,7 +138,7 @@ export default function Challenge() {
     }
 
     recordAnswer(isCorrect, 'math')
-  }, [isAnswered, questions, currentIndex, recordAnswer, addWrongQuestion, playCorrect, playWrong])
+  }, [isAnswered, questions, currentIndex, recordAnswer, addWrongQuestion, playCorrect, playWrong, handleAnswerGamification])
 
   const handleNext = useCallback(() => {
     if (currentIndex < questions.length - 1) {
@@ -150,11 +158,14 @@ export default function Challenge() {
           attempts: (currentProgress?.attempts || 0) + 1,
           bestScore: Math.max(correctCount, currentProgress?.bestScore || 0),
         })
+
+        // 游戏化：星级金币 + 50 经验 + 通关任务
+        completeLevel(stars)
       }
       
       setShowResult(true)
     }
-  }, [currentIndex, questions.length, playCompletion, currentLevel, correctCount, challengeProgress, updateChallengeProgress])
+  }, [currentIndex, questions.length, playCompletion, currentLevel, correctCount, challengeProgress, updateChallengeProgress, completeLevel])
 
   const handleBackToLevels = useCallback(() => {
     setIsPlaying(false)
@@ -203,6 +214,12 @@ export default function Challenge() {
                 {percentage}%
               </span>
             </Text>
+            <Group gap="xs">
+              <CoinIcon size={18} />
+              <Text size="lg" fw={700} className="text-amber-600">
+                金币 +{starsToCoins(stars)}
+              </Text>
+            </Group>
             {stars === 3 && (
               <Badge size="lg" color="amber" variant="light">
                 <Group gap="xs">
@@ -262,6 +279,8 @@ export default function Challenge() {
           total={questions.length}
           correct={correctCount}
         />
+
+        <ComboDisplay combo={combo} gain={lastGain} />
 
         <QuestionCard
           question={currentQuestion}

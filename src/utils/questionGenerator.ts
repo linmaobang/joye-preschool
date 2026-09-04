@@ -1,4 +1,5 @@
 import type { Question, QuestionType, MathQuestionType } from '../types'
+import { shiyiImportedQuestions } from '../data/shiyiQuestions'
 
 let questionIdCounter = 0
 
@@ -530,6 +531,33 @@ const mathGenerators: Record<MathQuestionType, () => Question> = {
   wordProblem: generateWordProblem,
   counting: generateCounting,
   sequence: generateSequence,
+  // ===== 经典题库扩展（shiyi-math-practice，442 题）=====
+  shiyiAdd20: () => getRandomImportedQuestion('shiyiAdd20'),
+  shiyiSub20: () => getRandomImportedQuestion('shiyiSub20'),
+  shiyiNumber: () => getRandomImportedQuestion('shiyiNumber'),
+  shiyiCompare: () => getRandomImportedQuestion('shiyiCompare'),
+  shiyiAddSub: () => getRandomImportedQuestion('shiyiAddSub'),
+  shiyiMoney: () => getRandomImportedQuestion('shiyiMoney'),
+  shiyiPattern: () => getRandomImportedQuestion('shiyiPattern'),
+  shiyiObserve: () => getRandomImportedQuestion('shiyiObserve'),
+  shiyiShape: () => getRandomImportedQuestion('shiyiShape'),
+  shiyiWord: () => getRandomImportedQuestion('shiyiWord'),
+}
+
+/** 从经典题库中按题型随机抽取一题，返回克隆副本避免共享引用 */
+function getRandomImportedQuestion(type: MathQuestionType): Question {
+  const pool = shiyiImportedQuestions.filter(q => q.type === type)
+  if (pool.length === 0) {
+    throw new Error(`No imported questions for type: ${type}`)
+  }
+  const q = pool[randomInt(0, pool.length - 1)]
+  return {
+    ...q,
+    options: q.options ? [...q.options] : undefined,
+    visual: q.visual
+      ? { ...q.visual, rows: q.visual.rows ? q.visual.rows.map(r => [...r]) : undefined }
+      : undefined,
+  }
 }
 
 export function generateQuestion(type: QuestionType): Question {

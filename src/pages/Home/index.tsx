@@ -11,6 +11,8 @@ import {
   Badge,
 } from '@mantine/core'
 import { useApp } from '../../stores/AppContext'
+import CharacterArea from '../../components/CharacterArea'
+import DailyQuestCard from '../../components/DailyQuestCard'
 import {
   IconMath,
   IconPinyin,
@@ -144,6 +146,10 @@ export default function Home() {
     ? Math.round((progress.pinyinProgress.correctAnswers / progress.pinyinProgress.totalQuestions) * 100)
     : 0
 
+  const charAccuracy = progress.charactersProgress.totalQuestions > 0
+    ? Math.round((progress.charactersProgress.correctAnswers / progress.charactersProgress.totalQuestions) * 100)
+    : 0
+
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return { text: '早上好', icon: <IconSun size={20} />, iconBg: 'bg-amber-300' }
@@ -167,9 +173,12 @@ export default function Home() {
           佳宜幼小衔接
         </Title>
         <Text className="text-gray-500" size="sm" mt={4}>
-          数学 · 拼音 · 英语
+          数学 · 拼音 · 识字 · 英语
         </Text>
       </Box>
+
+      {/* 角色区 - 等级 / 称号 / 经验 / 金币 */}
+      <CharacterArea />
 
       {/* 今日统计卡片 - 马卡龙渐变 */}
       <Card 
@@ -223,7 +232,7 @@ export default function Home() {
           </Box>
           <Text size="sm" fw={600} className="text-gray-600">学习模块</Text>
         </Group>
-        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
           <ModuleCard
             title="数学乐园"
             subtitle="加减法 · 数感 · 应用"
@@ -249,6 +258,18 @@ export default function Home() {
           />
 
           <ModuleCard
+            title="识字乐园"
+            subtitle="3000常用字 · 分级识字"
+            icon={<span className="text-xl font-bold">字</span>}
+            iconBg="bg-gradient-to-br from-rose-300 to-red-400"
+            stats={[
+              { label: '已识', value: progress.charactersProgress.learnedChars.length, color: 'text-rose-500' },
+              { label: '正确率', value: `${charAccuracy}%`, color: charAccuracy >= 70 ? 'text-emerald-500' : 'text-amber-500' },
+            ]}
+            onClick={() => navigate('/characters')}
+          />
+
+          <ModuleCard
             title="英语启蒙"
             subtitle="单词 · 句型 · 闪卡"
             icon={<IconEnglish size={24} />}
@@ -262,8 +283,13 @@ export default function Home() {
         </SimpleGrid>
       </Box>
 
-      {/* 快捷功能 - 调整布局使文字显示完整 */}
+      {/* 今日任务 */}
       <Box className="animate-slide-up stagger-3">
+        <DailyQuestCard />
+      </Box>
+
+      {/* 快捷功能 - 调整布局使文字显示完整 */}
+      <Box className="animate-slide-up stagger-4">
         <Group gap="sm" mb="sm">
           <Box className="w-6 h-6 rounded-lg flex items-center justify-center text-amber-500" style={{ backgroundColor: '#FFF3CD' }}>
             <IconStar size={14} />
@@ -271,6 +297,20 @@ export default function Home() {
           <Text size="sm" fw={600} className="text-gray-600">快捷功能</Text>
         </Group>
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+          <MenuCard
+            title="限时挑战"
+            description="60秒速算冲纪录"
+            icon={<span className="text-base">⏱️</span>}
+            iconBg="bg-gradient-to-br from-red-300 to-orange-400"
+            onClick={() => navigate('/time-attack')}
+          />
+          <MenuCard
+            title="奖励商店"
+            description="金币兑换贴纸皮肤"
+            icon={<span className="text-base">🪙</span>}
+            iconBg="bg-gradient-to-br from-amber-300 to-yellow-400"
+            onClick={() => navigate('/shop')}
+          />
           <MenuCard
             title="闯关模式"
             description="挑战关卡赢取星星"

@@ -1,4 +1,5 @@
-import type { AppData, Settings, Progress } from '../types'
+import type { AppData, Settings, Progress, Gamification } from '../types'
+import { createDailyQuests } from './gamification'
 
 const STORAGE_KEY = 'joye_preschool_data'
 
@@ -31,6 +32,19 @@ const defaultProgress: Progress = {
     correctAnswers: 0,
     learnedWords: [],
   },
+  charactersProgress: {
+    totalQuestions: 0,
+    correctAnswers: 0,
+    learnedChars: [],
+  },
+}
+
+const defaultGamification: Gamification = {
+  growth: { xp: 0, level: 1, maxCombo: 0 },
+  coins: 0,
+  timeAttackBest: {},
+  dailyQuests: createDailyQuests(getTodayDateString()),
+  shop: { ownedStickers: {}, ownedSkins: [], activeSkin: '' },
 }
 
 const defaultData: AppData = {
@@ -39,6 +53,7 @@ const defaultData: AppData = {
   wrongBook: [],
   challengeProgress: {},
   pinyinFavorites: [],
+  gamification: defaultGamification,
 }
 
 export function loadAppData(): AppData {
@@ -54,10 +69,24 @@ export function loadAppData(): AppData {
           mathProgress: { ...defaultProgress.mathProgress, ...data.progress?.mathProgress },
           pinyinProgress: { ...defaultProgress.pinyinProgress, ...data.progress?.pinyinProgress },
           englishProgress: { ...defaultProgress.englishProgress, ...data.progress?.englishProgress },
+          charactersProgress: { ...defaultProgress.charactersProgress, ...data.progress?.charactersProgress },
         },
         wrongBook: data.wrongBook || [],
         challengeProgress: data.challengeProgress || {},
         pinyinFavorites: data.pinyinFavorites || [],
+        gamification: {
+          ...defaultGamification,
+          ...data.gamification,
+          growth: { ...defaultGamification.growth, ...data.gamification?.growth },
+          timeAttackBest: { ...(data.gamification?.timeAttackBest || {}) },
+          dailyQuests: data.gamification?.dailyQuests || defaultGamification.dailyQuests,
+          shop: {
+            ...defaultGamification.shop,
+            ...data.gamification?.shop,
+            ownedStickers: data.gamification?.shop?.ownedStickers || {},
+            ownedSkins: data.gamification?.shop?.ownedSkins || [],
+          },
+        },
       }
     }
   } catch (error) {

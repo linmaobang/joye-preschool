@@ -26,6 +26,17 @@ const questionTypeLabels: Record<string, string> = {
   wordProblem: '生活应用',
   counting: '数一数',
   sequence: '排排序',
+  // 经典题库扩展
+  shiyiAdd20: '20以内加法',
+  shiyiSub20: '20以内减法',
+  shiyiNumber: '100以内数',
+  shiyiCompare: '大小比较',
+  shiyiAddSub: '100以内加减',
+  shiyiMoney: '人民币',
+  shiyiPattern: '找规律',
+  shiyiObserve: '观察物体',
+  shiyiShape: '有趣的图形',
+  shiyiWord: '解决问题',
 }
 
 export default function QuestionCard({

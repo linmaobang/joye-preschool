@@ -16,9 +16,11 @@ import {
 import type { QuestionType, Question, WrongQuestion } from '../../types'
 import { useApp } from '../../stores/AppContext'
 import { useAudio } from '../../hooks/useAudio'
+import { useGamification } from '../../hooks/useGamification'
 import { generateQuestions, checkAnswer } from '../../utils/questionGenerator'
 import QuestionCard from '../../components/QuestionCard'
 import ProgressBar from '../../components/ProgressBar'
+import ComboDisplay from '../../components/ComboDisplay'
 import StarRating, { calculateStars } from '../../components/StarRating'
 import {
   IconPlus,
@@ -48,7 +50,7 @@ interface PracticeTypeConfig {
   description: string
   icon: React.ReactNode
   iconBg: string
-  category: 'basic' | 'number' | 'fun'
+  category: 'basic' | 'number' | 'fun' | 'box'
 }
 
 // 应用题图标
@@ -76,12 +78,24 @@ const practiceTypes: PracticeTypeConfig[] = [
   { type: 'wordProblem', label: '生活应用', description: '解决生活问题', icon: <IconWordProblem size={18} />, iconBg: 'bg-amber-500', category: 'fun' },
   { type: 'counting', label: '数一数', description: '数数有几个', icon: <IconCount size={18} />, iconBg: 'bg-orange-500', category: 'fun' },
   { type: 'sequence', label: '排排序', description: '数字排序练习', icon: <IconSort size={18} />, iconBg: 'bg-lime-500', category: 'fun' },
+  // ===== 经典题库（shiyi-math-practice 442 题）=====
+  { type: 'shiyiAdd20', label: '20以内加法', description: '经典题库', icon: <IconPlusPlus size={18} />, iconBg: 'bg-cyan-600', category: 'box' },
+  { type: 'shiyiSub20', label: '20以内减法', description: '经典题库', icon: <IconMinusMinus size={18} />, iconBg: 'bg-teal-600', category: 'box' },
+  { type: 'shiyiNumber', label: '100以内数', description: '数的认识', icon: <IconNumberSense size={18} />, iconBg: 'bg-sky-600', category: 'box' },
+  { type: 'shiyiCompare', label: '大小比较', description: '进阶比大小', icon: <IconCompare size={18} />, iconBg: 'bg-rose-600', category: 'box' },
+  { type: 'shiyiAddSub', label: '100以内加减', description: '整十加减', icon: <IconSum size={18} />, iconBg: 'bg-emerald-600', category: 'box' },
+  { type: 'shiyiMoney', label: '人民币', description: '认识钱币找零', icon: <IconStar size={18} />, iconBg: 'bg-yellow-500', category: 'box' },
+  { type: 'shiyiPattern', label: '找规律', description: '猜下一个', icon: <IconSort size={18} />, iconBg: 'bg-fuchsia-500', category: 'box' },
+  { type: 'shiyiObserve', label: '观察物体', description: '从哪面看', icon: <IconCount size={18} />, iconBg: 'bg-indigo-600', category: 'box' },
+  { type: 'shiyiShape', label: '有趣的图形', description: '数一数图形', icon: <IconFun size={18} />, iconBg: 'bg-violet-600', category: 'box' },
+  { type: 'shiyiWord', label: '解决问题', description: '经典应用题', icon: <IconWordProblem size={18} />, iconBg: 'bg-orange-600', category: 'box' },
 ]
 
 const categoryLabels = {
   basic: { label: '基础运算', icon: <IconBasicMath size={14} />, iconBg: 'bg-blue-500' },
   number: { label: '数感培养', icon: <IconNumberSense size={14} />, iconBg: 'bg-purple-500' },
   fun: { label: '趣味练习', icon: <IconFun size={14} />, iconBg: 'bg-orange-500' },
+  box: { label: '新题宝箱', icon: <IconStar size={14} />, iconBg: 'bg-amber-500' },
 }
 
 const questionCountMarks = [
@@ -93,8 +107,9 @@ const questionCountMarks = [
 
 export default function Practice() {
   const { type: urlType } = useParams<{ type: string }>()
-  const { recordAnswer, addWrongQuestion } = useApp()
+  const { recordAnswer, addWrongQuestion, completePractice } = useApp()
   const { playCorrect, playWrong, playCompletion } = useAudio()
+  const { combo, lastGain, handleAnswer: handleAnswerGamification, resetCombo } = useGamification()
 
   const [selectedType, setSelectedType] = useState<QuestionType | null>(
     urlType as QuestionType || null
@@ -120,7 +135,8 @@ export default function Practice() {
     setSelectedAnswer(null)
     setIsAnswered(false)
     setIsPracticing(true)
-  }, [selectedType, questionCount])
+    resetCombo()
+  }, [selectedType, questionCount, resetCombo])
 
   const handleAnswer = useCallback((answer: number | string) => {
     if (isAnswered) return
@@ -131,6 +147,8 @@ export default function Practice() {
     const currentQuestion = questions[currentIndex]
     const isCorrect = checkAnswer(currentQuestion, answer)
     
+    handleAnswerGamification(isCorrect)
+
     if (isCorrect) {
       setCorrectCount(prev => prev + 1)
       playCorrect()
@@ -148,7 +166,7 @@ export default function Practice() {
     }
 
     recordAnswer(isCorrect, 'math')
-  }, [isAnswered, questions, currentIndex, recordAnswer, addWrongQuestion, playCorrect, playWrong])
+  }, [isAnswered, questions, currentIndex, recordAnswer, addWrongQuestion, playCorrect, playWrong, handleAnswerGamification])
 
   const handleNext = useCallback(() => {
     if (currentIndex < questions.length - 1) {
@@ -157,10 +175,11 @@ export default function Practice() {
       setIsAnswered(false)
     } else {
       playCompletion()
+      completePractice(questions.length, correctCount)
       setShowResult(true)
       setIsPracticing(false)
     }
-  }, [currentIndex, questions.length, playCompletion])
+  }, [currentIndex, questions.length, playCompletion, completePractice, correctCount])
 
   const handleRestart = useCallback(() => {
     setSelectedType(null)
@@ -258,6 +277,8 @@ export default function Practice() {
           correct={correctCount}
         />
 
+        <ComboDisplay combo={combo} gain={lastGain} />
+
         <Transition mounted={true} transition="pop" duration={300}>
           {(styles) => (
             <div style={styles}>
@@ -291,6 +312,7 @@ export default function Practice() {
     basic: practiceTypes.filter(p => p.category === 'basic'),
     number: practiceTypes.filter(p => p.category === 'number'),
     fun: practiceTypes.filter(p => p.category === 'fun'),
+    box: practiceTypes.filter(p => p.category === 'box'),
   }
 
   return (
@@ -372,7 +394,7 @@ export default function Practice() {
 
       {!selectedType && (
         <>
-          {(['basic', 'number', 'fun'] as const).map((category, catIndex) => (
+          {(['basic', 'number', 'fun', 'box'] as const).map((category, catIndex) => (
             <Box key={category} className={`animate-slide-up stagger-${catIndex + 1}`}>
               <Group gap="sm" mb="sm">
                 <Box className={`w-7 h-7 rounded-lg flex items-center justify-center text-white ${categoryLabels[category].iconBg}`}>

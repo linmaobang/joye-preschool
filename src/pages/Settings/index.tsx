@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { 
   Card, 
   Title, 
@@ -20,6 +20,26 @@ import {
   IconVolume,
   IconVolumeOff,
 } from '../../components/Icons'
+
+function IconDownload({ size = 24, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  )
+}
+
+function IconUpload({ size = 24, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  )
+}
 
 function IconTextSize({ size = 24, className = '' }: { size?: number; className?: string }) {
   return (
@@ -72,6 +92,9 @@ export default function Settings() {
   const { settings, updateSettings, progress, resetAllData } = useApp()
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [pendingImport, setPendingImport] = useState<Record<string, unknown> | null>(null)
+  const [importError, setImportError] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFontSizeChange = (value: string) => {
     updateSettings({ fontSize: value as FontSize })
@@ -92,6 +115,47 @@ export default function Settings() {
   const handleReset = () => {
     resetAllData()
     setShowResetConfirm(false)
+  }
+
+  const handleExport = () => {
+    const data = localStorage.getItem('joye_preschool_data')
+    if (!data) return
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `joye-preschool-backup-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string)
+        if (!parsed || typeof parsed !== 'object' || !('settings' in parsed) || !('progress' in parsed)) {
+          setImportError(true)
+          return
+        }
+        setPendingImport(parsed as Record<string, unknown>)
+      } catch {
+        setImportError(true)
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  const handleConfirmImport = () => {
+    if (!pendingImport) return
+    localStorage.setItem('joye_preschool_data', JSON.stringify(pendingImport))
+    setPendingImport(null)
+    window.location.reload()
   }
 
   return (
@@ -269,6 +333,46 @@ export default function Settings() {
 
       <Card shadow="none" padding="lg" radius="xl" className="border border-slate-100 hover:shadow-md transition-shadow">
         <Stack gap="md">
+          <Group gap="sm">
+            <Box className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+              <IconDownload size={18} />
+            </Box>
+            <Stack gap={0}>
+              <Text fw={600} className="text-slate-800">数据管理</Text>
+              <Text size="xs" c="dimmed">数据保存在本机浏览器，清除缓存会丢失，建议定期备份</Text>
+            </Stack>
+          </Group>
+          <Divider />
+          <Button
+            variant="light"
+            color="amber"
+            leftSection={<IconDownload size={18} />}
+            onClick={handleExport}
+            className="hover:scale-[1.01] active:scale-[0.99] transition-transform"
+          >
+            导出备份（下载 JSON 文件）
+          </Button>
+          <Button
+            variant="light"
+            color="teal"
+            leftSection={<IconUpload size={18} />}
+            onClick={() => fileInputRef.current?.click()}
+            className="hover:scale-[1.01] active:scale-[0.99] transition-transform"
+          >
+            恢复备份（导入 JSON 文件）
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </Stack>
+      </Card>
+
+      <Card shadow="none" padding="lg" radius="xl" className="border border-slate-100 hover:shadow-md transition-shadow">
+        <Stack gap="md">
           <Button
             variant="light"
             color="blue"
@@ -381,6 +485,35 @@ export default function Settings() {
           <Text size="xs" c="dimmed" ta="center">
             让学习变得简单有趣！
           </Text>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={!!pendingImport}
+        onClose={() => setPendingImport(null)}
+        title="恢复备份"
+        centered
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Text>恢复后将覆盖当前所有数据（学习记录、错题、金币、等级等），确定要恢复吗？</Text>
+          <Group justify="flex-end">
+            <Button variant="light" onClick={() => setPendingImport(null)}>取消</Button>
+            <Button color="teal" onClick={handleConfirmImport}>确认恢复</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={importError}
+        onClose={() => setImportError(false)}
+        title="导入失败"
+        centered
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Text>文件格式不正确或已损坏，未能恢复。现有数据未受影响。</Text>
+          <Button variant="light" onClick={() => setImportError(false)}>知道了</Button>
         </Stack>
       </Modal>
 

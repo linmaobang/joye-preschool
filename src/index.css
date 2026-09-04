@@ -84,6 +84,17 @@ body {
   line-height: 1.6;
 }
 
+/* 主题皮肤背景 */
+body[data-skin="hero"] {
+  background: linear-gradient(160deg, #FBE3E3 0%, #F6B5AB 40%, #F7CB92 72%, #FDF0DC 100%);
+}
+body[data-skin="space"] {
+  background: linear-gradient(160deg, #E3E9FF 0%, #A8BBF2 42%, #7E8CE0 72%, #B9B2EE 100%);
+}
+body[data-skin="dino"] {
+  background: linear-gradient(160deg, #E5F7E9 0%, #B9E4C9 42%, #CBD98F 72%, #F2E6C4 100%);
+}
+
 #root {
   min-height: 100vh;
   min-height: 100dvh;

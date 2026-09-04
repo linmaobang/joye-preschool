@@ -7,6 +7,10 @@ import Practice from './pages/Practice'
 import Challenge from './pages/Challenge'
 import WrongBook from './pages/WrongBook'
 import Settings from './pages/Settings'
+import Shop from './pages/Shop'
+import Collection from './pages/Collection'
+import TimeAttack from './pages/TimeAttack'
+import LevelUpModal from './components/LevelUpModal'
 import PinyinHome from './pages/Pinyin'
 import VowelsPage from './pages/Pinyin/VowelsPage'
 import InitialsPage from './pages/Pinyin/InitialsPage'
@@ -18,20 +22,24 @@ import EnglishHome from './pages/English'
 import FlashcardPage from './pages/English/FlashcardPage'
 import SentencesPage from './pages/English/SentencesPage'
 import EnglishPracticePage from './pages/English/PracticePage'
+import CharacterPracticePage from './pages/Characters'
 
 function App() {
-  const { settings } = useApp()
+  const { settings, gamification, levelUp, dismissLevelUp } = useApp()
 
   useEffect(() => {
     document.body.setAttribute('data-theme', settings.theme)
     document.body.setAttribute('data-font-size', settings.fontSize)
     document.documentElement.setAttribute('data-theme', settings.theme)
-  }, [settings.theme, settings.fontSize])
+    document.body.setAttribute('data-skin', gamification.shop.activeSkin)
+    document.documentElement.setAttribute('data-skin', gamification.shop.activeSkin)
+  }, [settings.theme, settings.fontSize, gamification.shop.activeSkin])
 
   return (
     <div 
       data-theme={settings.theme} 
       data-font-size={settings.fontSize}
+      data-skin={gamification.shop.activeSkin}
       className="min-h-screen"
     >
       <Routes>
@@ -43,6 +51,9 @@ function App() {
           <Route path="challenge/:levelId" element={<Challenge />} />
           <Route path="wrongbook" element={<WrongBook />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="shop" element={<Shop />} />
+          <Route path="collection" element={<Collection />} />
+          <Route path="time-attack" element={<TimeAttack />} />
           <Route path="pinyin" element={<PinyinHome />} />
           <Route path="pinyin/vowels" element={<VowelsPage />} />
           <Route path="pinyin/initials" element={<InitialsPage />} />
@@ -56,8 +67,10 @@ function App() {
           <Route path="english/flashcard" element={<FlashcardPage />} />
           <Route path="english/sentences" element={<SentencesPage />} />
           <Route path="english/practice" element={<EnglishPracticePage />} />
+          <Route path="characters" element={<CharacterPracticePage />} />
         </Route>
       </Routes>
+      <LevelUpModal info={levelUp} onClose={dismissLevelUp} />
     </div>
   )
 }

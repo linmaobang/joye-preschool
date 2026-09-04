@@ -11,59 +11,66 @@ import {
   SimpleGrid,
 } from '@mantine/core'
 import { useApp } from '../../stores/AppContext'
-import { usePinyinAudio } from '../../hooks/usePinyinAudio'
 import { useAudio } from '../../hooks/useAudio'
 import { useGamification } from '../../hooks/useGamification'
 import ComboDisplay from '../../components/ComboDisplay'
-import { 
-  getRandomPinyinCharPairs, 
-  PinyinCharPair,
-} from '../../data/pinyin/questions'
-import { getTonedPinyin } from '../../data/pinyin/syllables'
-import { IconRefresh, IconPlay, IconStar, IconCheck, IconArrowRight, IconPractice } from '../../components/Icons'
+import { getCharactersByGroup, characterStats, type CharacterItem, type CharacterGroup } from '../../data/characters'
+import { IconRefresh, IconStar, IconCheck, IconArrowRight, IconPractice, IconPlay } from '../../components/Icons'
 
-type QuestionType = 'pinyinToChar' | 'charToPinyin'
+type QuestionType = 'charToPinyin' | 'pinyinToChar'
 
 interface Question {
-  pair: PinyinCharPair
+  char: CharacterItem
   type: QuestionType
   options: string[]
   answer: string
 }
 
-function generateQuestion(pairs: PinyinCharPair[], type: QuestionType, currentPair: PinyinCharPair): Question {
-  const otherPairs = pairs.filter(p => p.char !== currentPair.char)
-  const shuffled = otherPairs.sort(() => Math.random() - 0.5).slice(0, 3)
-  
-  if (type === 'pinyinToChar') {
-    const options = [...shuffled.map(p => p.char), currentPair.char]
-      .sort(() => Math.random() - 0.5)
-    return {
-      pair: currentPair,
-      type,
-      options,
-      answer: currentPair.char,
-    }
-  } else {
-    const tonedPinyin = getTonedPinyin(currentPair.pinyin, currentPair.tone)
-    const options = [...shuffled.map(p => getTonedPinyin(p.pinyin, p.tone)), tonedPinyin]
-      .sort(() => Math.random() - 0.5)
-    return {
-      pair: currentPair,
-      type,
-      options,
-      answer: tonedPinyin,
-    }
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5)
+}
+
+function generateQuestions(group: CharacterGroup, count: number): Question[] {
+  const pool = shuffle(getCharactersByGroup(group))
+  const picked = pool.slice(0, count)
+  const types: QuestionType[] = ['charToPinyin', 'pinyinToChar']
+  return picked.map((item, i) => {
+    const type = types[i % types.length]
+    const distractors = pool.filter(p => p.char !== item.char && p.pinyin !== item.pinyin)
+    const picked3 = shuffle(distractors).slice(0, 3)
+    const options = type === 'charToPinyin'
+      ? shuffle([...picked3.map(p => p.pinyin), item.pinyin])
+      : shuffle([...picked3.map(p => p.char), item.char])
+    return { char: item, type, options, answer: type === 'charToPinyin' ? item.pinyin : item.char }
+  })
+}
+
+function speakChar(char: string) {
+  try {
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(char)
+    u.lang = 'zh-CN'
+    u.rate = 0.75
+    window.speechSynthesis.speak(u)
+  } catch {
+    /* 朗读失败不影响答题 */
   }
 }
 
-export default function PinyinPracticePage() {
-  const { speakPinyin } = usePinyinAudio()
+const groupInfo: Record<CharacterGroup, { label: string; desc: string }> = {
+  easy: { label: '简单', desc: '基础高频字' },
+  medium: { label: '中等', desc: '进阶常用字' },
+  hard: { label: '困难', desc: '挑战生僻字' },
+}
+
+export default function CharacterPracticePage() {
   const { playCorrect, playWrong, playCompletion } = useAudio()
-  const { updatePinyinProgress, completePractice } = useApp()
+  const { updateCharacterProgress, markCharacterLearned, completePractice } = useApp()
   const { combo, lastGain, handleAnswer: handleAnswerGamification, resetCombo } = useGamification()
-  
+
   const [stage, setStage] = useState<'select' | 'practice' | 'result'>('select')
+  const [group, setGroup] = useState<CharacterGroup>('easy')
   const [questionCount, setQuestionCount] = useState(10)
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -72,38 +79,30 @@ export default function PinyinPracticePage() {
   const [isAnswered, setIsAnswered] = useState(false)
 
   const startPractice = useCallback(() => {
-    const pairs = getRandomPinyinCharPairs(Math.max(questionCount + 5, 20))
-    const types: QuestionType[] = ['pinyinToChar', 'charToPinyin']
-    
-    const generatedQuestions = pairs.slice(0, questionCount).map((pair, i) => {
-      const type = types[i % types.length]
-      return generateQuestion(pairs, type, pair)
-    })
-    
-    setQuestions(generatedQuestions)
+    const qs = generateQuestions(group, questionCount)
+    setQuestions(qs)
     setCurrentIndex(0)
     setCorrectCount(0)
     setSelectedAnswer(null)
     setIsAnswered(false)
     setStage('practice')
     resetCombo()
-  }, [questionCount, resetCombo])
+  }, [group, questionCount, resetCombo])
 
   const handleAnswer = useCallback((answer: string) => {
     if (isAnswered) return
-    
     setSelectedAnswer(answer)
     setIsAnswered(true)
-    
     const isCorrect = answer === questions[currentIndex].answer
     handleAnswerGamification(isCorrect)
     if (isCorrect) {
       setCorrectCount(prev => prev + 1)
+      markCharacterLearned(questions[currentIndex].char.char)
       playCorrect()
     } else {
       playWrong()
     }
-  }, [isAnswered, questions, currentIndex, playCorrect, playWrong, handleAnswerGamification])
+  }, [isAnswered, questions, currentIndex, handleAnswerGamification, markCharacterLearned, playCorrect, playWrong])
 
   const handleNext = useCallback(() => {
     if (currentIndex < questions.length - 1) {
@@ -112,15 +111,13 @@ export default function PinyinPracticePage() {
       setIsAnswered(false)
     } else {
       playCompletion()
-      updatePinyinProgress(questions.length, correctCount)
+      updateCharacterProgress(questions.length, correctCount)
       completePractice(questions.length, correctCount)
       setStage('result')
     }
-  }, [currentIndex, questions.length, playCompletion, correctCount, updatePinyinProgress, completePractice])
+  }, [currentIndex, questions.length, playCompletion, correctCount, updateCharacterProgress, completePractice])
 
-  const handleRestart = () => {
-    setStage('select')
-  }
+  const handleRestart = () => setStage('select')
 
   const currentQuestion = questions[currentIndex]
   const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0
@@ -131,22 +128,44 @@ export default function PinyinPracticePage() {
       <Stack gap="lg" className="px-1">
         <Box className="text-center py-2 animate-slide-up">
           <Group justify="center" gap="sm" mb="xs">
-            <Box className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white shadow-md">
+            <Box className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-red-500 flex items-center justify-center text-white shadow-md">
               <IconPractice size={20} />
             </Box>
           </Group>
-          <Title order={3} className="text-lg font-bold text-gray-800">拼音练习</Title>
-          <Text size="sm" className="text-gray-500">拼音选字、字选拼音</Text>
+          <Title order={3} className="text-lg font-bold text-gray-800">识字乐园</Title>
+          <Text size="sm" className="text-gray-500">看字选音、看音选字 · {characterStats.easy + characterStats.medium + characterStats.hard} 个常用字</Text>
         </Box>
 
-        <Card shadow="none" padding="lg" radius="xl" className="bg-white border-2 border-teal-100 animate-slide-up stagger-1">
+        <Card shadow="none" padding="lg" radius="xl" className="bg-white border-2 border-rose-100 animate-slide-up stagger-1">
+          <Text fw={600} size="sm" className="text-gray-700 mb-3">选择难度</Text>
+          <SimpleGrid cols={3} spacing="sm">
+            {(Object.keys(groupInfo) as CharacterGroup[]).map((g) => (
+              <Button
+                key={g}
+                variant={group === g ? 'filled' : 'light'}
+                color="rose"
+                radius="xl"
+                size="md"
+                className={group === g ? '' : 'text-gray-700'}
+                onClick={() => setGroup(g)}
+              >
+                {groupInfo[g].label}
+              </Button>
+            ))}
+          </SimpleGrid>
+          <Text size="xs" className="text-gray-400 mt-2">
+            {groupInfo[group].desc} · {characterStats[group]} 字
+          </Text>
+        </Card>
+
+        <Card shadow="none" padding="lg" radius="xl" className="bg-white border-2 border-rose-100 animate-slide-up stagger-1">
           <Text fw={600} size="sm" className="text-gray-700 mb-4">选择题目数量</Text>
           <SimpleGrid cols={4} spacing="sm">
             {[5, 10, 15, 20].map((count) => (
               <Button
                 key={count}
                 variant={questionCount === count ? 'filled' : 'light'}
-                color="teal"
+                color="rose"
                 radius="xl"
                 size="md"
                 className={questionCount === count ? '' : 'text-gray-700'}
@@ -161,11 +180,11 @@ export default function PinyinPracticePage() {
         <Button
           size="lg"
           radius="xl"
-          className="animate-slide-up stagger-2 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold"
+          className="animate-slide-up stagger-2 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold"
           onClick={startPractice}
           rightSection={<IconArrowRight size={18} />}
         >
-          开始练习
+          开始识字
         </Button>
 
         <Box className="h-4" />
@@ -175,12 +194,10 @@ export default function PinyinPracticePage() {
 
   if (stage === 'practice' && currentQuestion) {
     const getQuestionText = () => {
-      return currentQuestion.type === 'pinyinToChar' 
-        ? '根据拼音选择正确的汉字' 
-        : '选择正确的拼音'
+      return currentQuestion.type === 'charToPinyin'
+        ? '读一读这个字，选出正确的拼音'
+        : '看看拼音，选出对应的汉字'
     }
-
-    const tonedPinyin = getTonedPinyin(currentQuestion.pair.pinyin, currentQuestion.pair.tone)
 
     return (
       <Stack gap="lg" className="px-1">
@@ -189,39 +206,51 @@ export default function PinyinPracticePage() {
             <Text size="sm" className="text-gray-500">第 {currentIndex + 1} / {questions.length} 题</Text>
             <Text size="sm" className="text-gray-500">正确 {correctCount} 题</Text>
           </Group>
-          <Progress value={progress} size="sm" radius="xl" color="teal" />
+          <Progress value={progress} size="sm" radius="xl" color="rose" />
         </Box>
 
         <ComboDisplay combo={combo} gain={lastGain} />
 
-        <Card shadow="md" padding="xl" radius="xl" className="bg-white border-2 border-teal-100 animate-slide-up stagger-1">
+        <Card shadow="md" padding="xl" radius="xl" className="bg-white border-2 border-rose-100 animate-slide-up stagger-1">
           <Stack align="center" gap="md">
             <Text size="sm" className="text-gray-500">{getQuestionText()}</Text>
-            
-            {currentQuestion.type === 'pinyinToChar' ? (
+
+            {currentQuestion.type === 'charToPinyin' ? (
               <Group gap="sm" align="center">
-                <Text className="text-5xl font-bold text-teal-600">
-                  {tonedPinyin}
+                <Text className="text-6xl font-bold text-rose-600">
+                  {currentQuestion.char.char}
                 </Text>
                 <Button
                   variant="subtle"
-                  color="teal"
+                  color="rose"
                   size="sm"
                   radius="xl"
-                  onClick={() => speakPinyin(currentQuestion.pair.pinyin, currentQuestion.pair.tone)}
+                  onClick={() => speakChar(currentQuestion.char.char)}
                 >
                   <IconPlay size={16} />
                 </Button>
               </Group>
             ) : (
               <Group gap="sm" align="center">
-                <Text className="text-5xl font-bold text-gray-700">
-                  {currentQuestion.pair.char}
+                <Text className="text-5xl font-bold text-red-500">
+                  {currentQuestion.char.pinyin}
                 </Text>
-                {currentQuestion.pair.image && (
-                  <Text className="text-3xl">{currentQuestion.pair.image}</Text>
-                )}
+                <Button
+                  variant="subtle"
+                  color="rose"
+                  size="sm"
+                  radius="xl"
+                  onClick={() => speakChar(currentQuestion.char.char)}
+                >
+                  <IconPlay size={16} />
+                </Button>
               </Group>
+            )}
+
+            {currentQuestion.char.word && (
+              <Text size="sm" className="text-gray-400">
+                组词：<span className="text-rose-500 font-medium">{currentQuestion.char.word}</span>
+              </Text>
             )}
           </Stack>
         </Card>
@@ -231,11 +260,11 @@ export default function PinyinPracticePage() {
             const isSelected = selectedAnswer === option
             const isCorrect = option === currentQuestion.answer
             const showResult = isAnswered
-            
+
             let bgColor = 'bg-white hover:bg-gray-50'
             let borderColor = 'border-gray-200'
             let textColor = 'text-gray-700'
-            
+
             if (showResult) {
               if (isCorrect) {
                 bgColor = 'bg-emerald-50'
@@ -247,9 +276,11 @@ export default function PinyinPracticePage() {
                 textColor = 'text-red-700'
               }
             } else if (isSelected) {
-              bgColor = 'bg-teal-50'
-              borderColor = 'border-teal-400'
+              bgColor = 'bg-rose-50'
+              borderColor = 'border-rose-400'
             }
+
+            const isPinyinOption = currentQuestion.type === 'charToPinyin'
 
             return (
               <Card
@@ -262,10 +293,10 @@ export default function PinyinPracticePage() {
                 }`}
                 onClick={() => handleAnswer(option)}
               >
-                <Text 
-                  ta="center" 
-                  fw={600} 
-                  size="xl"
+                <Text
+                  ta="center"
+                  fw={600}
+                  size={isPinyinOption ? 'xl' : '3xl'}
                   className={textColor}
                 >
                   {option}
@@ -279,7 +310,7 @@ export default function PinyinPracticePage() {
           <Button
             size="lg"
             radius="xl"
-            className="animate-slide-up bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold"
+            className="animate-slide-up bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold"
             onClick={handleNext}
             rightSection={<IconArrowRight size={18} />}
           >
@@ -295,7 +326,7 @@ export default function PinyinPracticePage() {
   if (stage === 'result') {
     return (
       <Stack gap="lg" className="px-1">
-        <Card shadow="lg" padding="xl" radius="xl" className="bg-gradient-to-br from-teal-500 to-cyan-500 text-white animate-slide-up">
+        <Card shadow="lg" padding="xl" radius="xl" className="bg-gradient-to-br from-rose-500 to-red-500 text-white animate-slide-up">
           <Stack align="center" gap="md">
             <Box className={`w-20 h-20 rounded-full flex items-center justify-center ${
               percentage >= 80 ? 'bg-yellow-400' : percentage >= 60 ? 'bg-white/30' : 'bg-white/20'
@@ -343,7 +374,7 @@ export default function PinyinPracticePage() {
           <Button
             size="lg"
             radius="xl"
-            className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold"
+            className="bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold"
             leftSection={<IconArrowRight size={18} />}
             onClick={startPractice}
           >

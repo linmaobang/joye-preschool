@@ -15,6 +15,17 @@ export type MathQuestionType =
   | 'wordProblem'
   | 'counting'
   | 'sequence'
+  // ===== 经典题库扩展（源自 shiyi-math-practice，MIT）=====
+  | 'shiyiAdd20'    // 20以内加法
+  | 'shiyiSub20'    // 20以内减法
+  | 'shiyiNumber'   // 100以内数的认识
+  | 'shiyiCompare'  // 大小比较
+  | 'shiyiAddSub'   // 100以内简单加减
+  | 'shiyiMoney'    // 人民币
+  | 'shiyiPattern'  // 找规律
+  | 'shiyiObserve'  // 观察物体
+  | 'shiyiShape'    // 有趣的图形
+  | 'shiyiWord'     // 解决问题
 
 export type PinyinQuestionType =
   | 'pinyinToChar'
@@ -86,6 +97,11 @@ export interface Progress {
     correctAnswers: number
     learnedWords: string[]
   }
+  charactersProgress: {
+    totalQuestions: number
+    correctAnswers: number
+    learnedChars: string[]
+  }
 }
 
 export interface Question {
@@ -105,13 +121,15 @@ export interface Question {
 }
 
 export interface VisualData {
-  type: 'dots' | 'sticks' | 'fruits' | 'animals' | 'numberLine' | 'pinyinSpell'
+  type: 'dots' | 'sticks' | 'fruits' | 'animals' | 'numberLine' | 'pinyinSpell' | 'emojiRows'
   count?: number
   items?: string[]
   range?: [number, number]
   initial?: string
   final?: string
   medial?: string
+  caption?: string
+  rows?: string[][]
 }
 
 export interface WrongQuestion {
@@ -151,12 +169,60 @@ export interface PinyinFavorite {
   addedAt: number
 }
 
+// ===================== 游戏化 =====================
+
+export interface GrowthState {
+  xp: number
+  level: number
+  maxCombo: number
+}
+
+export type QuestType = 'doQuestions' | 'combo5' | 'clearLevel' | 'timeAttack' | 'accuracy80'
+
+export interface DailyQuest {
+  id: string
+  type: QuestType
+  target: number
+  progress: number
+  rewardCoins: number
+  rewardXp: number
+  completed: boolean
+  claimed: boolean
+}
+
+export interface DailyQuestState {
+  date: string
+  quests: DailyQuest[]
+  allClaimed: boolean
+}
+
+export interface ShopState {
+  ownedStickers: Record<string, string[]>
+  ownedSkins: string[]
+  activeSkin: string
+}
+
+export interface Gamification {
+  growth: GrowthState
+  coins: number
+  timeAttackBest: Record<string, number>
+  dailyQuests: DailyQuestState
+  shop: ShopState
+}
+
+export interface LevelUpInfo {
+  fromLevel: number
+  toLevel: number
+  title: string
+}
+
 export interface AppData {
   settings: Settings
   progress: Progress
   wrongBook: WrongQuestion[]
   challengeProgress: ChallengeProgress
   pinyinFavorites: PinyinFavorite[]
+  gamification: Gamification
 }
 
 export interface AppContextType {
@@ -165,6 +231,9 @@ export interface AppContextType {
   wrongBook: WrongQuestion[]
   challengeProgress: ChallengeProgress
   pinyinFavorites: PinyinFavorite[]
+  gamification: Gamification
+  levelUp: LevelUpInfo | null
+  dismissLevelUp: () => void
   updateSettings: (settings: Partial<Settings>) => void
   updateProgress: (progress: Partial<Progress>) => void
   addWrongQuestion: (question: WrongQuestion) => void
@@ -178,4 +247,16 @@ export interface AppContextType {
   markPinyinLearned: (pinyin: string) => void
   updatePinyinProgress: (totalQuestions: number, correctAnswers: number) => void
   updateEnglishProgress: (totalQuestions: number, correctAnswers: number) => void
+  updateCharacterProgress: (totalQuestions: number, correctAnswers: number) => void
+  markCharacterLearned: (char: string) => void
+  // 游戏化方法
+  onAnswerGamification: (isCorrect: boolean, combo: number) => void
+  completePractice: (totalQuestions: number, correctAnswers: number) => void
+  completeLevel: (stars: number) => void
+  completeTimeAttack: (mode: string, score: number) => boolean
+  claimQuest: (questId: string) => void
+  claimAllQuests: () => void
+  buyStickerPack: (packId: string) => { newStickers: string[]; refund: number } | null
+  buySkin: (skinId: string) => boolean
+  setActiveSkin: (skinId: string) => void
 }

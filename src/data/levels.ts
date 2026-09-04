@@ -116,6 +116,47 @@ export const levels: LevelConfig[] = [
     questionCount: 15,
     unlockCondition: 'challenge-1',
   },
+  // ===== 经典题库扩展关卡（shiyi-math-practice）=====
+  {
+    id: 'challenge-3',
+    name: '人民币商店',
+    description: '认识人民币，学会找零',
+    difficulty: 'challenge',
+    module: 'math',
+    questionTypes: ['shiyiMoney'],
+    questionCount: 10,
+    unlockCondition: 'challenge-1',
+  },
+  {
+    id: 'challenge-4',
+    name: '图形王国',
+    description: '数图形、看物体',
+    difficulty: 'challenge',
+    module: 'math',
+    questionTypes: ['shiyiShape', 'shiyiObserve'],
+    questionCount: 12,
+    unlockCondition: 'challenge-3',
+  },
+  {
+    id: 'challenge-5',
+    name: '规律大师',
+    description: '找规律，猜下一个',
+    difficulty: 'challenge',
+    module: 'math',
+    questionTypes: ['shiyiPattern'],
+    questionCount: 10,
+    unlockCondition: 'challenge-3',
+  },
+  {
+    id: 'challenge-6',
+    name: '百以内挑战',
+    description: '100以内数的认识与加减',
+    difficulty: 'challenge',
+    module: 'math',
+    questionTypes: ['shiyiNumber', 'shiyiAddSub'],
+    questionCount: 12,
+    unlockCondition: 'challenge-4,challenge-5',
+  },
 ]
 
 export const difficultyLabels: Record<string, string> = {
