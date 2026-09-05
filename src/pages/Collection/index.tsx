@@ -73,9 +73,14 @@ export default function Collection() {
         )
       })}
 
-      <Button variant="light" color="gray" size="lg" leftSection={<IconBack size={18} />} onClick={() => navigate(-1)} className="min-h-[52px]">
-        返回
-      </Button>
+      <Group grow>
+        <Button variant="light" color="gray" size="lg" leftSection={<IconBack size={18} />} onClick={() => navigate(-1)} className="min-h-[52px]">
+          返回
+        </Button>
+        <Button color="pink" size="lg" onClick={() => navigate('/shop')} className="min-h-[52px]">
+          🪙 去商店兑换
+        </Button>
+      </Group>
 
       <Box className="h-4" />
     </Stack>

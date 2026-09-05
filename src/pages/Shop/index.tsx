@@ -13,6 +13,8 @@ export default function Shop() {
   const navigate = useNavigate()
   const { gamification, buyStickerPack, buySkin, setActiveSkin } = useApp()
   const { coins, shop } = gamification
+  const totalOwned = stickerPacks.reduce((sum, p) => sum + (shop.ownedStickers[p.id] || []).length, 0)
+  const totalCount = stickerPacks.reduce((sum, p) => sum + p.stickers.length, 0)
   const [openResult, setOpenResult] = useState<{ newStickers: string[]; refund: number; packName: string; packEmoji: string } | null>(null)
   const [insufficient, setInsufficient] = useState(false)
 
@@ -53,6 +55,26 @@ export default function Shop() {
         <Group justify="center" gap="sm">
           <CoinIcon size={28} />
           <Text fw={800} size="xl" className="text-amber-700">{coins} 金币</Text>
+        </Group>
+      </Card>
+
+      {/* 我的收藏墙入口 */}
+      <Card
+        shadow="none"
+        padding="md"
+        radius="xl"
+        className="bg-gradient-to-r from-pink-100 to-rose-50 border border-pink-200 cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
+        onClick={() => navigate('/collection')}
+      >
+        <Group justify="space-between" wrap="nowrap">
+          <Group gap="sm" wrap="nowrap">
+            <Box className="w-10 h-10 rounded-xl bg-pink-500 flex items-center justify-center text-white text-lg">📔</Box>
+            <Box>
+              <Text fw={700} className="text-slate-800">我的收藏墙</Text>
+              <Text size="xs" c="dimmed">已收集 {totalOwned} / {totalCount} 张贴纸</Text>
+            </Box>
+          </Group>
+          <Text fw={800} className="text-pink-600 text-lg">查看 →</Text>
         </Group>
       </Card>
 
