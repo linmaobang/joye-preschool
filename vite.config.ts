@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // 建议添加以下配置
-  base: './', // 确保静态资源路径为相对路径，避免部署在子路径时失效
+  // 使用绝对路径，确保 /shop /pinyin /poems 等二级路由下静态资源从根加载（相对路径会被 Cloudflare _redirects 回退成 HTML 导致白屏）
+  base: '/',
   server: {
     port: 5173,
     open: true
