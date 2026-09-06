@@ -11,6 +11,7 @@ import {
   Badge,
 } from '@mantine/core'
 import { useApp } from '../../stores/AppContext'
+import { poems } from '../../data/poems'
 import CharacterArea from '../../components/CharacterArea'
 import DailyQuestCard from '../../components/DailyQuestCard'
 import {
@@ -173,7 +174,7 @@ export default function Home() {
           佳宜幼小衔接
         </Title>
         <Text className="text-gray-500" size="sm" mt={4}>
-          数学 · 拼音 · 识字 · 英语
+          数学 · 拼音 · 识字 · 英语 · 古诗
         </Text>
       </Box>
 
@@ -279,6 +280,18 @@ export default function Home() {
               { label: '单词', value: '0个', color: 'text-blue-500' },
             ]}
             onClick={() => navigate('/english')}
+          />
+
+          <ModuleCard
+            title="古诗乐园"
+            subtitle="经典古诗 · 听读背诵"
+            icon={<span className="text-xl font-bold">📜</span>}
+            iconBg="bg-gradient-to-br from-amber-300 to-orange-400"
+            stats={[
+              { label: '已学', value: (progress.poemsLearned || []).length, color: 'text-amber-500' },
+              { label: '共', value: `${poems.length}首`, color: 'text-orange-500' },
+            ]}
+            onClick={() => navigate('/poems')}
           />
         </SimpleGrid>
       </Box>

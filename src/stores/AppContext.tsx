@@ -40,6 +40,7 @@ export function AppProvider({ children }: AppProviderProps) {
       ...data,
       englishProgress: data.englishProgress || { totalQuestions: 0, correctAnswers: 0, learnedWords: [] },
       charactersProgress: data.charactersProgress || { totalQuestions: 0, correctAnswers: 0, learnedChars: [] },
+      poemsLearned: data.poemsLearned || [],
     }
   })
   const [wrongBook, setWrongBook] = useState<WrongQuestion[]>(() => loadAppData().wrongBook)
@@ -60,6 +61,7 @@ export function AppProvider({ children }: AppProviderProps) {
       ...data.progress,
       englishProgress: prev.englishProgress || { totalQuestions: 0, correctAnswers: 0, learnedWords: [] },
       charactersProgress: prev.charactersProgress || { totalQuestions: 0, correctAnswers: 0, learnedChars: [] },
+      poemsLearned: data.progress.poemsLearned || [],
     }))
     // 每日任务跨天自动重置
     const today = getTodayDateString()
@@ -166,6 +168,19 @@ export function AppProvider({ children }: AppProviderProps) {
     addQuestProgress('doQuestions', 1)
     addQuestProgress('combo5', combo >= 5 ? 1 : 0)
   }, [applyXp, addCoins, addQuestProgress])
+
+  // 学会一首古诗：记录 + 首次奖励（+20 经验 +3 金币）
+  const markPoemLearned = useCallback((poemId: string): boolean => {
+    if (progress.poemsLearned.includes(poemId)) return false
+    setProgress(prev => ({
+      ...prev,
+      poemsLearned: prev.poemsLearned.includes(poemId) ? prev.poemsLearned : [...prev.poemsLearned, poemId],
+    }))
+    applyXp(20)
+    addCoins(3)
+    addQuestProgress('doQuestions', 1)
+    return true
+  }, [progress.poemsLearned, applyXp, addCoins, addQuestProgress])
 
   // 一次练习结束（≥10题且正确率≥80% 完成"准星"任务）
   const completePractice = useCallback((totalQuestions: number, correctAnswers: number) => {
@@ -301,6 +316,7 @@ export function AppProvider({ children }: AppProviderProps) {
       pinyinProgress: { totalQuestions: 0, correctAnswers: 0, learnedPinyin: [] },
       englishProgress: { totalQuestions: 0, correctAnswers: 0, learnedWords: [] },
       charactersProgress: { totalQuestions: 0, correctAnswers: 0, learnedChars: [] },
+      poemsLearned: [],
     }
     const defaultGamification: Gamification = {
       growth: { xp: 0, level: 1, maxCombo: 0 },
@@ -451,6 +467,7 @@ export function AppProvider({ children }: AppProviderProps) {
     updateEnglishProgress,
     updateCharacterProgress,
     markCharacterLearned,
+    markPoemLearned,
     onAnswerGamification,
     completePractice,
     completeLevel,

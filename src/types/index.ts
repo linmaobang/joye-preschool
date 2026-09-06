@@ -102,6 +102,7 @@ export interface Progress {
     correctAnswers: number
     learnedChars: string[]
   }
+  poemsLearned: string[]
 }
 
 export interface Question {
@@ -249,6 +250,7 @@ export interface AppContextType {
   updateEnglishProgress: (totalQuestions: number, correctAnswers: number) => void
   updateCharacterProgress: (totalQuestions: number, correctAnswers: number) => void
   markCharacterLearned: (char: string) => void
+  markPoemLearned: (poemId: string) => boolean
   // 游戏化方法
   onAnswerGamification: (isCorrect: boolean, combo: number) => void
   completePractice: (totalQuestions: number, correctAnswers: number) => void

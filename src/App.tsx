@@ -23,6 +23,8 @@ import FlashcardPage from './pages/English/FlashcardPage'
 import SentencesPage from './pages/English/SentencesPage'
 import EnglishPracticePage from './pages/English/PracticePage'
 import CharacterPracticePage from './pages/Characters'
+import Poems from './pages/Poems'
+import PoemDetail from './pages/Poems/PoemDetail'
 
 function App() {
   const { settings, gamification, levelUp, dismissLevelUp } = useApp()
@@ -68,6 +70,8 @@ function App() {
           <Route path="english/sentences" element={<SentencesPage />} />
           <Route path="english/practice" element={<EnglishPracticePage />} />
           <Route path="characters" element={<CharacterPracticePage />} />
+          <Route path="poems" element={<Poems />} />
+          <Route path="poems/:id" element={<PoemDetail />} />
         </Route>
       </Routes>
       <LevelUpModal info={levelUp} onClose={dismissLevelUp} />

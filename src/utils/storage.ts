@@ -37,6 +37,7 @@ const defaultProgress: Progress = {
     correctAnswers: 0,
     learnedChars: [],
   },
+  poemsLearned: [],
 }
 
 const defaultGamification: Gamification = {
